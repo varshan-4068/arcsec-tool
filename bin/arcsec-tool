@@ -1,5 +1,10 @@
 #!/usr/bin/env bash
 
+# arsectool - Arch Linux Security Quick Check
+# Author: Sirivarshan K
+# Github: https://github.com/varshan-4068/
+# License: MIT
+
 COLOR1=$(tput setaf 2)
 COLOR2=$(tput setaf 7)
 RESET=$(tput sgr0)
@@ -7,8 +12,42 @@ RESET=$(tput sgr0)
 CRITICAL=0
 WARN=0
 
+help_flag() {
+  cat << EOF
+
+Usage:
+	sudo arcsec-tool [OPTIONS]
+
+Options:
+	-h, --help      Show this help message and exit
+
+Description:
+	Performs basic security checks on an Arch Linux system:
+	 - SSH configuration
+	 - sudo privileges
+	 - failed systemd services
+	 - package updates
+	 - orphaned packages
+	 - firewall status
+
+Notes:
+	• Some checks require sudo privileges
+	• Designed for Arch Linux and Arch-based systems
+	• This script does not apply fixes automatically
+	• Recommendation's and Fixes are provided for warning's
+
+EOF
+}
+
+case "$1" in
+  -h|--help)
+    help_flag
+    exit 0
+    ;;
+esac
+
 if [[ $EUID -ne 0 ]]; then
-  echo "${COLOR2}[INFO]${COLOR1} Some checks may require sudo privileges${COLOR2}"
+	help_flag
 	exit 1
 fi
 

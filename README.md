@@ -13,13 +13,15 @@ To Install the Tool Run the commands below...
 1. Checks for ssh root login disabled
 2. Checks for ssh password autentication enabled
 3. Checks if the system is up-to-date
-4. Checks if any one of the 3 firewalls ufw, nftables, firewalld is enabled
-5. Display Errors and Recommendation based on the above checks
-6. Designed with Clean UI
-7. Only Runs on arch and it's based distros
+4. Checks for any orphaned packages
+5. Checks for any systemd failed services found
+6. Checks if any one of the 3 firewalls ufw, nftables, firewalld is enabled
+7. Display Summary, Errors and Recommendation based on the above checks
+8. Designed with Clean UI 
+10. Only Runs on arch and it's based distros
 
 <br />
 
-<img width="1915" height="1080" alt="screenshot-2025-12-19_23-44-46" src="https://github.com/user-attachments/assets/62ef3538-25fa-45e7-bf87-99cc71dbd978" />
+<img width="1920" height="1080" alt="screenshot-2025-12-20_18-41-58" src="https://github.com/user-attachments/assets/afcdcb25-054c-4afe-8d14-c9b730711292" />
 
 ---

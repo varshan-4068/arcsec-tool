@@ -7,9 +7,15 @@ RESET=$(tput sgr0)
 CRITICAL=0
 WARN=0
 
-if [ ! -f /usr/bin/figlet ];then
+if ! command -v figlet &>/dev/null;then
 	echo -e "Figlet Not Found!\n"
 	sudo pacman -S figlet
+fi
+
+
+if ! command -v gum &>/dev/null; then
+  echo -e "Gum Not Found!\n"
+  sudo pacman -S --noconfirm gum
 fi
 
 print_logo(){
@@ -27,7 +33,9 @@ print_logo
 
 echo -e "${COLOR1}══ Arch Security Quick Check ══${COLOR2}\n"
 
-if grep -q "^PermitRootLogin yes" /etc/ssh/sshd_config 2>/dev/null; then
+SSHD="/etc/ssh/sshd_config"
+
+if [[ -f "$SSHD" ]] && grep -Eq "^\s*PermitRootLogin\s+yes" "$SSHD" 2>/dev/null; then
   echo -e "${COLOR1}[CRITICAL] SSH root login enabled${COLOR2}"
   echo "[FIX]: Set PermitRootLogin no in /etc/ssh/sshd_config"
   ((CRITICAL++))
@@ -35,7 +43,7 @@ else
   echo -e "${COLOR1}[OK] SSH root login disabled${COLOR2}"
 fi
 
-if grep -q "^PasswordAuthentication yes" /etc/ssh/sshd_config 2>/dev/null; then
+if [[ -f "$SSHD" ]] && grep -q "^\s*PasswordAuthentication\s+yes" "$SSHD" 2>/dev/null; then
   echo -e "${COLOR1}[WARN] SSH password authentication enabled${COLOR2}"
   echo "[RECOMMENDATION]: Use SSH keys only"
   ((WARN++))
@@ -43,10 +51,20 @@ else
   echo -e "${COLOR1}[OK] SSH password authentication disabled${COLOR2}"
 fi
 
-if gum spin --spinner points --title "Updating System Packages…" -- sudo pacman -Sy --quiet; then
-  gum style --foreground 2 "[+] Package database updated"
+FAIL=$(systemctl --failed --no-legend 2>/dev/null | wc -l)
+
+if [ "$FAIL" -eq 0 ]; then
+  echo -e "${COLOR1}[OK] No Systemd Failed Services Found${COLOR2}"
 else
-  gum style --foreground 1 "[-] Failed to update package database"
+	echo -e "${COLOR1}[WARN] $FAIL Failed Systemd Services Found${COLOR2}"
+	((WARN++))
+fi
+
+if gum spin --spinner points --title "Updating System Packages…" -- sudo pacman -Syu --quiet; then
+  gum style --foreground 2 "[OK] Package database updated"
+else
+  gum style --foreground 1 "[WARN] Failed to update package database"
+	((WARN++))
 fi
 
 UPDATES=$(pacman -Qu 2>/dev/null | wc -l)
@@ -57,9 +75,20 @@ else
   echo -e "${COLOR1}[OK] System up to date${COLOR2}"
 fi
 
-FIREWALL=$(sudo ufw status | grep -q "^Status: active " 2>/dev/null || systemctl is-active --quiet ufw || systemctl is-active --quiet firewalld || systemctl is-active --quiet nftables)
+ORPHAN=$(pacman -Qdt | wc -l)
 
-if $FIREWALL; then
+if [[ "$ORPHAN" -gt 0 ]]; then
+	echo -e "${COLOR1}[WARN] $ORPHAN Orphaned Packages Found${COLOR2}"
+	echo -e "${COLOR2}[Fix] Use \"sudo pacman -Rns \$(pacman -Qdt | awk '{print \$1}')\""
+	((WARN++))
+else
+	echo -e "${COLOR1}[OK] No Orphaned Packages Found${COLOR2}"
+fi
+
+if command -v ufw &>/dev/null && sudo ufw status | grep -q "^Status: active" \
+	 || systemctl is-active --quiet ufw \
+	 || systemctl is-active --quiet firewalld \
+	 || systemctl is-active --quiet nftables; then
 	echo -e "${COLOR1}[OK] Firewall Enabled..."
 else
 	echo -e "${COLOR1}[WARN] Firewall Not Enabled...${COLOR2}"
@@ -71,11 +100,9 @@ echo -e "Critical issues: ${COLOR2}$CRITICAL${COLOR2}"
 echo -e "Warnings: ${COLOR2}$WARN${COLOR1}"
 
 if [[ "$CRITICAL" -gt 0 ]]; then
-  echo -e "\n${COLOR1}System is NOT secure.${COLOR2}"
+  echo -e "\n${COLOR1}System is NOT secure.${COLOR2}\n"
 else
-  echo -e "\n${COLOR1}No critical security issues found.${RESET}"
+  echo -e "\n${COLOR1}No critical security issues found.${RESET}\n"
 fi
 
-echo -e "\nPress Enter to Close"
-
-read -r
+read -rp "Press Enter to Close"

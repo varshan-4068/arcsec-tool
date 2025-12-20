@@ -14,7 +14,7 @@ To Use it as a command run the commands below...
     sudo pacman -S gum figlet
     cd arcsec-tool/
     sudo cp bin/arcsec-tool /usr/bin/
-    sudo arcsec-tool
+    arcsec-tool
 
 For help Use...
 

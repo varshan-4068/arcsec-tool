@@ -51,6 +51,16 @@ else
   echo -e "${COLOR1}[OK] SSH password authentication disabled${COLOR2}"
 fi
 
+sudoers=/etc/sudoers
+
+if sudo grep -Eq '^\s*#.*NOPASSWD' "$sudoers" 2>/dev/null; then
+  echo -e "${COLOR1}[OK] Sudo requires password${COLOR2}"
+else
+  echo -e "${COLOR1}[WARN] NOPASSWD sudo rules detected${COLOR2}"
+  ((WARN++))
+fi
+
+
 FAIL=$(systemctl --failed --no-legend 2>/dev/null | wc -l)
 
 if [ "$FAIL" -eq 0 ]; then

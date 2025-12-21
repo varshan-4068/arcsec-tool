@@ -1,13 +1,12 @@
 #!/usr/bin/env bash
 
-# arsec-tool - Arch Linux Security Quick Check
+# arcsec-tool - Arch Linux Security Quick Check
 # Author: Sirivarshan K
 # Github: https://github.com/varshan-4068/
 # License: MIT
 
 COLOR1=$(tput setaf 2)
 COLOR2=$(tput setaf 7)
-RESET=$(tput sgr0)
 
 CRITICAL=0
 WARN=0
@@ -41,13 +40,13 @@ Notes:
 EOF
 }
 
-LOGFILE="/home/arch/logs/arcsec-tool-report.log"
+LOGFILE="/var/log/arcsec-tool-report.log"
 
 case "${1:-}" in
 	--log|-l)
 		if [ -f "$LOGFILE" ];then
 			echo
-			cat "$LOGFILE"
+			sudo cat "$LOGFILE"
 		else
 			echo -e "No log report found!"
 		fi
@@ -59,13 +58,14 @@ case "${1:-}" in
 		;;
 	--clear|-c)
 		if [ -f "$LOGFILE" ];then
-			exec sudo rm "$LOGFILE"
+			sudo rm "$LOGFILE"
 		fi
 		exit 0
 		;;
 	"")
 		if [[ $EUID -ne 0 ]]; then
-			exec sudo /usr/bin/arcsec-tool "$@"
+			sudo "$0" "$@"
+			exit 0
 		fi
 		;;
 	*)
@@ -76,16 +76,28 @@ case "${1:-}" in
 		;;
 esac
 
+if [ ! -f "$LOGFILE" ]; then
+	touch "$LOGFILE"
+	chmod 640 "$LOGFILE"
+fi
+
+echo -e "[$(date)]\n" >> "$LOGFILE"
+
 if ! command -v figlet &>/dev/null;then
-	echo -e "Figlet Not Found!\n"
-	pacman -S figlet
+	echo -e "Figlet Not Found! Installing...\n" | tee -a "$LOGFILE"
+	pacman -S figlet --noconfirm 
 fi
 
 
 if ! command -v gum &>/dev/null; then
-  echo -e "Gum Not Found!\n"
-  pacman -S --noconfirm gum
+  echo -e "Gum Not Found! Installing...\n" | tee -a "$LOGFILE"
+  pacman -S gum --noconfirm
 fi
+
+logs(){
+	echo -e "${COLOR1}══ Logs ══${COLOR2}"
+	echo -e "Log file saved at: $LOGFILE\n"
+}
 
 print_logo(){
 
@@ -100,77 +112,77 @@ EOF
 clear
 print_logo
 
-echo -e "${COLOR1}══ Arch Security Quick Check ══${COLOR2}\n"
+echo -e "\n${COLOR1}══ Arch Security Quick Check ══${COLOR2}\n" | tee -a "$LOGFILE"
 
 SSHD="/etc/ssh/sshd_config"
 
-if [[ -f "$SSHD" ]] && grep -Eq "^\s*PermitRootLogin\s+(yes|prohibit-password)" "$SSHD" 2>/dev/null; then
-  echo -e "${COLOR1}[CRITICAL] SSH root login enabled${COLOR2}"
-  echo "[FIX]: Set PermitRootLogin no in /etc/ssh/sshd_config"
+if [[ -f "$SSHD" ]] && grep -Eiq "^\s*PermitRootLogin\s+(yes|prohibit-password)" "$SSHD" 2>/dev/null; then
+  echo -e "${COLOR1}[CRITICAL] SSH root login enabled${COLOR2}" | tee -a "$LOGFILE"
+  echo "[FIX]: Set PermitRootLogin no in /etc/ssh/sshd_config" | tee -a "$LOGFILE"
   ((CRITICAL++))
 else
-  echo -e "${COLOR1}[OK] SSH root login disabled${COLOR2}"
+  echo -e "${COLOR1}[OK] SSH root login disabled${COLOR2}" | tee -a "$LOGFILE"
 fi
 
-if [[ -f "$SSHD" ]] && grep -q "^\s*PasswordAuthentication\s+yes" "$SSHD" 2>/dev/null; then
-  echo -e "${COLOR1}[WARN] SSH password authentication enabled${COLOR2}"
-  echo "[RECOMMENDATION]: Use SSH keys only"
+if [[ -f "$SSHD" ]] && grep -Eiq "^\s*PasswordAuthentication\s+yes" "$SSHD" 2>/dev/null; then
+  echo -e "${COLOR1}[WARN] SSH password authentication enabled${COLOR2}" | tee -a "$LOGFILE"
+  echo "[RECOMMENDATION]: Use SSH keys only" | tee -a "$LOGFILE"
   ((WARN++))
 else
-  echo -e "${COLOR1}[OK] SSH password authentication disabled${COLOR2}"
+  echo -e "${COLOR1}[OK] SSH password authentication disabled${COLOR2}" | tee -a "$LOGFILE"
 fi
 
 sudoers=/etc/sudoers
 
-if grep -Eq '^\s*#.*NOPASSWD' "$sudoers" 2>/dev/null; then
-  echo -e "${COLOR1}[OK] Sudo requires password${COLOR2}"
-else
-  echo -e "${COLOR1}[WARN] NOPASSWD sudo rules detected${COLOR2}"
+if grep -Eiq '^\s*[^#].*NOPASSWD' "$sudoers" 2>/dev/null; then
+  echo -e "${COLOR1}[WARN] NOPASSWD sudo rules detected${COLOR2}" | tee -a "$LOGFILE"
   ((WARN++))
+else
+  echo -e "${COLOR1}[OK] Sudo requires password${COLOR2}" | tee -a "$LOGFILE"
 fi
 
 
 FAIL=$(systemctl --failed --no-legend 2>/dev/null | wc -l)
 
 if [ "$FAIL" -eq 0 ]; then
-  echo -e "${COLOR1}[OK] No Systemd Failed Services Found${COLOR2}"
+  echo -e "${COLOR1}[OK] No Systemd Failed Services Found${COLOR2}" | tee -a "$LOGFILE"
 else
-	echo -e "${COLOR1}[WARN] $FAIL Failed Systemd Services Found${COLOR2}"
+	echo -e "${COLOR1}[WARN] $FAIL Failed Systemd Services Found${COLOR2}" | tee -a "$LOGFILE"
 	((WARN++))
 fi
 
 if gum spin --spinner points --title "Updating System Packages…" -- pacman -Sy --quiet; then
-  gum style --foreground 2 "[OK] Package database updated"
+  gum style --foreground 2 "[OK] Package database updated" | tee -a "$LOGFILE"
 else
-  gum style --foreground 1 "[WARN] Failed to update package database"
+  gum style --foreground 1 "[WARN] Failed to update package database" | tee -a "$LOGFILE"
 	((WARN++))
 fi
 
 UPDATES=$(pacman -Qu 2>/dev/null | wc -l)
 if [[ "$UPDATES" -gt 0 ]]; then
-  echo -e "${COLOR1}[WARN] $UPDATES pending updates${COLOR2}"
+  echo -e "${COLOR1}[WARN] $UPDATES pending updates${COLOR2}" | tee -a "$LOGFILE"
   ((WARN++))
 else
-  echo -e "${COLOR1}[OK] System up to date${COLOR2}"
+  echo -e "${COLOR1}[OK] System up to date${COLOR2}" | tee -a "$LOGFILE"
 fi
 
-ORPHAN=$(pacman -Qdt | wc -l)
+ORPHAN=$(pacman -Qdtq | wc -l)
 
 if [[ "$ORPHAN" -gt 0 ]]; then
-	echo -e "${COLOR1}[WARN] $ORPHAN Orphaned Packages Found${COLOR2}"
-	echo -e "${COLOR2}[Fix] Use \"sudo pacman -Rns \$(pacman -Qdt | awk '{print \$1}')\""
+	echo -e "${COLOR1}[WARN] $ORPHAN Orphaned Packages Found${COLOR2}" | tee -a "$LOGFILE"
+	echo -e "${COLOR2}[Fix] Use \"sudo pacman -Rns \$(pacman -Qdtq)\"" | tee -a "$LOGFILE"
 	((WARN++))
 else
-	echo -e "${COLOR1}[OK] No Orphaned Packages Found${COLOR2}"
+	echo -e "${COLOR1}[OK] No Orphaned Packages Found${COLOR2}" | tee -a "$LOGFILE"
 fi
 
-if command -v ufw &>/dev/null && ufw status | grep -q "^Status: active" \
+if (command -v ufw &>/dev/null && ufw status | grep -q "^Status: active") \
 	 || systemctl is-active --quiet ufw \
 	 || systemctl is-active --quiet firewalld \
 	 || systemctl is-active --quiet nftables; then
-	echo -e "${COLOR1}[OK] Firewall Enabled..."
+	echo -e "${COLOR1}[OK] Firewall Enabled..." | tee -a "$LOGFILE"
 else
-	echo -e "${COLOR1}[WARN] Firewall Not Enabled...${COLOR2}"
+	echo -e "${COLOR1}[WARN] Firewall Not Enabled...${COLOR2}" | tee -a "$LOGFILE"
 	((WARN++))
 fi
 
@@ -180,28 +192,26 @@ echo -e "Warnings: ${COLOR2}$WARN${COLOR1}"
 
 if [[ "$CRITICAL" -gt 0 ]]; then
   echo -e "\n${COLOR1}System is NOT secure.${COLOR2}\n"
+	logs
 else
-  echo -e "\n${COLOR1}No critical security issues found.${RESET}\n"
+  echo -e "\n${COLOR1}No critical security issues found.${COLOR2}\n"
+	logs
 fi
 
 # File Report's 
 
-if [ ! -f "$LOGFILE" ]; then
-	mkdir -p /home/arch/logs/
-	touch "$LOGFILE"
-fi
+{
+	echo -e "\n══ Summary ══"
+	echo "Critical issues: $CRITICAL"
+	echo "Warnings: $WARN"
 
-echo "[$(date)] Summary" >> "$LOGFILE"
-echo "══ Summary ══" >> "$LOGFILE"
-echo "Critical issues: $CRITICAL" >> "$LOGFILE"
-echo "Warnings: $WARN" >> "$LOGFILE"
+	if [[ "$CRITICAL" -gt 0 ]]; then
+		echo "System is NOT secure."
+	else
+		echo "No critical security issues found."
+	fi
 
-if [[ "$CRITICAL" -gt 0 ]]; then
-  echo "System is NOT secure." >> "$LOGFILE"
-else
-  echo "No critical security issues found." >> "$LOGFILE"
-fi
-
-echo -e "\n" >> "$LOGFILE"
+	echo -e ""
+} >> "$LOGFILE"
 
 read -rp "Press Enter to Close"

@@ -81,7 +81,7 @@ if [ ! -f "$LOGFILE" ]; then
 	chmod 640 "$LOGFILE"
 fi
 
-echo -e "[$(date)]\n" >> "$LOGFILE"
+echo -e "${COLOR2}[$(date)]\n" >> "$LOGFILE"
 
 if ! command -v figlet &>/dev/null;then
 	echo -e "Figlet Not Found! Installing...\n" | tee -a "$LOGFILE"

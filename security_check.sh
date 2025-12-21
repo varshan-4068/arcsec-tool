@@ -1,5 +1,10 @@
 #!/usr/bin/env bash
 
+# arsec-tool - Arch Linux Security Quick Check
+# Author: Sirivarshan K
+# Github: https://github.com/varshan-4068/
+# License: MIT
+
 COLOR1=$(tput setaf 2)
 COLOR2=$(tput setaf 7)
 RESET=$(tput sgr0)
@@ -7,20 +12,79 @@ RESET=$(tput sgr0)
 CRITICAL=0
 WARN=0
 
-if [[ $EUID -ne 0 ]]; then
-  echo "${COLOR2}[INFO]${COLOR1} Some checks may require sudo privileges${COLOR2}"
-	exit 1
-fi
+help_flag() {
+  cat << EOF
+
+Usage:
+	arcsec-tool [OPTIONS]
+
+Options:
+	-h, --help    Display help message and exit
+	-l, --log     Display the log output of previous security check
+	-c, --clear   Clears the log output's of security check's
+
+Description:
+	Performs basic security checks on an Arch Linux system:
+	 - SSH configuration
+	 - sudo privileges
+	 - failed systemd services
+	 - package updates
+	 - orphaned packages
+	 - firewall status
+
+Notes:
+	• Some checks require sudo privileges
+	• Designed for Arch Linux and Arch-based systems
+	• This script does not apply fixes automatically
+	• Recommendation's and Fixes are provided for warning's
+
+EOF
+}
+
+LOGFILE="/home/arch/logs/arcsec-tool-report.log"
+
+case "${1:-}" in
+	--log|-l)
+		if [ -f "$LOGFILE" ];then
+			echo
+			cat "$LOGFILE"
+		else
+			echo -e "No log report found!"
+		fi
+		exit 0
+		;;
+  --help|-h)
+    help_flag
+    exit 0
+		;;
+	--clear|-c)
+		if [ -f "$LOGFILE" ];then
+			exec sudo rm "$LOGFILE"
+		fi
+		exit 0
+		;;
+	"")
+		if [[ $EUID -ne 0 ]]; then
+			exec sudo /usr/bin/arcsec-tool "$@"
+		fi
+		;;
+	*)
+		echo
+		echo "Unknown option: ${1:-}"
+		help_flag
+		exit 1
+		;;
+esac
 
 if ! command -v figlet &>/dev/null;then
 	echo -e "Figlet Not Found!\n"
-	sudo pacman -S figlet
+	pacman -S figlet
 fi
 
 
 if ! command -v gum &>/dev/null; then
   echo -e "Gum Not Found!\n"
-  sudo pacman -S --noconfirm gum
+  pacman -S --noconfirm gum
 fi
 
 print_logo(){
@@ -40,7 +104,7 @@ echo -e "${COLOR1}══ Arch Security Quick Check ══${COLOR2}\n"
 
 SSHD="/etc/ssh/sshd_config"
 
-if [[ -f "$SSHD" ]] && grep -Eq "^\s*PermitRootLogin\s+yes" "$SSHD" 2>/dev/null; then
+if [[ -f "$SSHD" ]] && grep -Eq "^\s*PermitRootLogin\s+(yes|prohibit-password)" "$SSHD" 2>/dev/null; then
   echo -e "${COLOR1}[CRITICAL] SSH root login enabled${COLOR2}"
   echo "[FIX]: Set PermitRootLogin no in /etc/ssh/sshd_config"
   ((CRITICAL++))
@@ -58,7 +122,7 @@ fi
 
 sudoers=/etc/sudoers
 
-if sudo grep -Eq '^\s*#.*NOPASSWD' "$sudoers" 2>/dev/null; then
+if grep -Eq '^\s*#.*NOPASSWD' "$sudoers" 2>/dev/null; then
   echo -e "${COLOR1}[OK] Sudo requires password${COLOR2}"
 else
   echo -e "${COLOR1}[WARN] NOPASSWD sudo rules detected${COLOR2}"
@@ -75,7 +139,7 @@ else
 	((WARN++))
 fi
 
-if gum spin --spinner points --title "Updating System Packages…" -- sudo pacman -Syu --quiet; then
+if gum spin --spinner points --title "Updating System Packages…" -- pacman -Sy --quiet; then
   gum style --foreground 2 "[OK] Package database updated"
 else
   gum style --foreground 1 "[WARN] Failed to update package database"
@@ -100,7 +164,7 @@ else
 	echo -e "${COLOR1}[OK] No Orphaned Packages Found${COLOR2}"
 fi
 
-if command -v ufw &>/dev/null && sudo ufw status | grep -q "^Status: active" \
+if command -v ufw &>/dev/null && ufw status | grep -q "^Status: active" \
 	 || systemctl is-active --quiet ufw \
 	 || systemctl is-active --quiet firewalld \
 	 || systemctl is-active --quiet nftables; then
@@ -120,5 +184,24 @@ else
   echo -e "\n${COLOR1}No critical security issues found.${RESET}\n"
 fi
 
-read -rp "Press Enter to Close"
+# File Report's 
 
+if [ ! -f "$LOGFILE" ]; then
+	mkdir -p /home/arch/logs/
+	touch "$LOGFILE"
+fi
+
+echo "[$(date)] Summary" >> "$LOGFILE"
+echo "══ Summary ══" >> "$LOGFILE"
+echo "Critical issues: $CRITICAL" >> "$LOGFILE"
+echo "Warnings: $WARN" >> "$LOGFILE"
+
+if [[ "$CRITICAL" -gt 0 ]]; then
+  echo "System is NOT secure." >> "$LOGFILE"
+else
+  echo "No critical security issues found." >> "$LOGFILE"
+fi
+
+echo -e "\n" >> "$LOGFILE"
+
+read -rp "Press Enter to Close"

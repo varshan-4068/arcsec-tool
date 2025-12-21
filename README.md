@@ -8,6 +8,15 @@ To Install the Tool as a script run the commands below...
     chmod +x security_check.sh
     sudo ./security_check.sh
 
+For help Use...
+
+    ./security_check.sh [OPTIONS]
+
+    OPTIONS:
+        -h | --help
+        -l | --log
+        -c | --clear
+
 To Use it as a command run the commands below...
 
     git clone https://github.com/varshan-4068/arcsec-tool.git
@@ -23,6 +32,7 @@ For help Use...
     OPTIONS: 
         -h | --help
         -l | --log
+        -c | --clear
 
 ## Usecase
 

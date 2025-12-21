@@ -16,11 +16,12 @@ help_flag() {
   cat << EOF
 
 Usage:
-	sudo arcsec-tool [OPTIONS]
+	arcsec-tool [OPTIONS]
 
 Options:
 	-h, --help    Display help message and exit
 	-l, --log     Display the log output of previous security check
+	-c, --clear   Clears the log output's of security check's
 
 Description:
 	Performs basic security checks on an Arch Linux system:
@@ -40,11 +41,13 @@ Notes:
 EOF
 }
 
+LOGFILE="/home/arch/logs/arcsec-tool-report.log"
+
 case "${1:-}" in
 	--log|-l)
-		if [ -f "$HOME"/arcsec-tool-report.log ];then
+		if [ -f "$LOGFILE" ];then
 			echo
-			cat ~/arcsec-tool-report.log
+			cat "$LOGFILE"
 		else
 			echo -e "No log report found!"
 		fi
@@ -54,9 +57,15 @@ case "${1:-}" in
     help_flag
     exit 0
 		;;
+	--clear|-c)
+		if [ -f "$LOGFILE" ];then
+			exec sudo rm "$LOGFILE"
+		fi
+		exit 0
+		;;
 	"")
 		if [[ $EUID -ne 0 ]]; then
-					exec sudo /usr/bin/arcsec-tool "$@"
+			exec sudo /usr/bin/arcsec-tool "$@"
 		fi
 		;;
 	*)
@@ -130,7 +139,7 @@ else
 	((WARN++))
 fi
 
-if gum spin --spinner points --title "Updating System Packages…" -- pacman -Syu --quiet; then
+if gum spin --spinner points --title "Updating System Packages…" -- pacman -Sy --quiet; then
   gum style --foreground 2 "[OK] Package database updated"
 else
   gum style --foreground 1 "[WARN] Failed to update package database"
@@ -177,23 +186,22 @@ fi
 
 # File Report's 
 
-LOGFILE="/home/arch/arcsec-tool-report.log"
-
 if [ ! -f "$LOGFILE" ]; then
-	rm "$LOGFILE"
+	mkdir -p /home/arch/logs/
+	touch "$LOGFILE"
 fi
 
 echo "[$(date)] Summary" >> "$LOGFILE"
-echo "══ Summary ══" >> $LOGFILE
-echo "Critical issues: $CRITICAL" >> $LOGFILE
-echo "Warnings: $WARN" >> $LOGFILE
+echo "══ Summary ══" >> "$LOGFILE"
+echo "Critical issues: $CRITICAL" >> "$LOGFILE"
+echo "Warnings: $WARN" >> "$LOGFILE"
 
 if [[ "$CRITICAL" -gt 0 ]]; then
-  echo "System is NOT secure." >> $LOGFILE
+  echo "System is NOT secure." >> "$LOGFILE"
 else
-  echo "No critical security issues found." >> $LOGFILE
+  echo "No critical security issues found." >> "$LOGFILE"
 fi
 
-echo -e "\n" >> $LOGFILE
+echo -e "\n" >> "$LOGFILE"
 
 read -rp "Press Enter to Close"

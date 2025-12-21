@@ -10,6 +10,7 @@ COLOR2=$(tput setaf 7)
 
 CRITICAL=0
 WARN=0
+INTERACTIVE=0
 
 help_flag() {
   cat << EOF
@@ -62,6 +63,13 @@ case "${1:-}" in
 		fi
 		exit 0
 		;;
+	--non-interactive|-n)
+		INTERACTIVE=1
+		if [[ $EUID -ne 0 ]]; then
+			sudo "$0" "$@"
+			exit 0
+		fi
+		;;
 	"")
 		if [[ $EUID -ne 0 ]]; then
 			sudo "$0" "$@"
@@ -83,15 +91,21 @@ fi
 
 echo -e "${COLOR2}[$(date)]\n" >> "$LOGFILE"
 
-if ! command -v figlet &>/dev/null;then
+if ! command -v figlet &>/dev/null && [ "$INTERACTIVE" -eq 1 ];then
 	echo -e "Figlet Not Found! Installing...\n" | tee -a "$LOGFILE"
 	pacman -S figlet --noconfirm 
+elif ! command -v figlet &>/dev/null;then
+	echo -e "Figlet Not Found! Installing...\n" | tee -a "$LOGFILE"
+	pacman -S figlet
 fi
 
 
-if ! command -v gum &>/dev/null; then
+if ! command -v gum &>/dev/null && [ "$INTERACTIVE" -eq 1 ]; then
   echo -e "Gum Not Found! Installing...\n" | tee -a "$LOGFILE"
   pacman -S gum --noconfirm
+elif ! command -v gum &>/dev/null;then
+  echo -e "Gum Not Found! Installing...\n" | tee -a "$LOGFILE"
+  pacman -S gum
 fi
 
 logs(){
@@ -214,4 +228,6 @@ fi
 	echo -e ""
 } >> "$LOGFILE"
 
-read -rp "Press Enter to Close"
+if [ "$INTERACTIVE" -eq 0 ]; then
+	read -rp "Press Enter to Close"
+fi

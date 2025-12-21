@@ -19,9 +19,10 @@ Usage:
 	arcsec-tool [OPTIONS]
 
 Options:
-	-h, --help    Display help message and exit
-	-l, --log     Display the log output of previous security check
-	-c, --clear   Clears the log output's of security check's
+	-h, --help     		Display help message and exit
+	-l, --log      		Display the log output of previous security check
+	-c, --clear    		Clears the log output's of security check's
+	-n, --non-interactive   Run the command in non-interactive mode
 
 Description:
 	Performs basic security checks on an Arch Linux system:

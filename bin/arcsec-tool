@@ -101,12 +101,9 @@ elif ! command -v figlet &>/dev/null;then
 fi
 
 
-if ! command -v gum &>/dev/null && [ "$INTERACTIVE" -eq 1 ]; then
+if ! command -v gum &>/dev/null; then
   echo -e "Gum Not Found! Installing...\n" | tee -a "$LOGFILE"
   pacman -S gum --noconfirm
-elif ! command -v gum &>/dev/null;then
-  echo -e "Gum Not Found! Installing...\n" | tee -a "$LOGFILE"
-  pacman -S gum
 fi
 
 logs(){
@@ -116,11 +113,15 @@ logs(){
 
 print_logo(){
 
+if command -v figlet &>/dev/null; then
 cat << EOF
 
 $(figlet "SECURITY CHECK")
 
 EOF
+else
+	 echo -e "=== SECURITY CHECK ===\n"
+fi
 
 }
 

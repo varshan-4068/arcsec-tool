@@ -6,7 +6,7 @@ To Install the Tool as a script run the commands below...
     sudo pacman -S gum figlet
     cd arcsec-tool/
     chmod +x security_check.sh
-    sudo ./security_check.sh
+    ./security_check.sh
 
 For help Use...
 

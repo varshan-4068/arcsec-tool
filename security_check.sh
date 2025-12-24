@@ -197,6 +197,7 @@ if (command -v ufw &>/dev/null && ufw status | grep -q "^Status: active") \
 	 || systemctl is-active --quiet firewalld \
 	 || systemctl is-active --quiet nftables; then
 	echo -e "${COLOR1}[OK] Firewall Enabled..." | tee -a "$LOGFILE"
+	echo -e "${COLOR1}[NOTE] Firewall Rules not inspected..." | tee -a "$LOGFILE"
 else
 	echo -e "${COLOR1}[WARN] Firewall Not Enabled...${COLOR2}" | tee -a "$LOGFILE"
 	((WARN++))

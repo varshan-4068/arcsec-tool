@@ -68,7 +68,7 @@ case "${1:-}" in
 		INTERACTIVE=1
 		if [[ $EUID -ne 0 ]]; then
 			echo -e "\n${COLOR1}NOTE:\n$(tput setaf 1)This script installs required UI and CLI dependencies if not found!\nto provide an better UI\n${COLOR2}"
-			read -rp "Press Enter to Proceed"
+			sleep 2
 			sudo "$0" "$@"
 			exit 0
 		fi

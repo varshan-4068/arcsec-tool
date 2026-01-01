@@ -12,10 +12,6 @@ CRITICAL=0
 WARN=0
 INTERACTIVE=0
 
-echo -e "\n${COLOR1}NOTE:\n$(tput setaf 1)This script installs required UI and CLI dependencies if not found!\nto provide an better UI\n${COLOR2}"
-
-read -rp "Press Enter to Proceed"
-
 help_flag() {
   cat << EOF
 
@@ -71,12 +67,16 @@ case "${1:-}" in
 	--non-interactive|-n)
 		INTERACTIVE=1
 		if [[ $EUID -ne 0 ]]; then
+			echo -e "\n${COLOR1}NOTE:\n$(tput setaf 1)This script installs required UI and CLI dependencies if not found!\nto provide an better UI\n${COLOR2}"
+			read -rp "Press Enter to Proceed"
 			sudo "$0" "$@"
 			exit 0
 		fi
 		;;
 	"")
 		if [[ $EUID -ne 0 ]]; then
+			echo -e "\n${COLOR1}NOTE:\n$(tput setaf 1)This script installs required UI and CLI dependencies if not found!\nto provide an better UI\n${COLOR2}"
+			read -rp "Press Enter to Proceed"
 			sudo "$0" "$@"
 			exit 0
 		fi

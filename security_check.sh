@@ -67,7 +67,9 @@ case "${1:-}" in
 	--non-interactive|-n)
 		INTERACTIVE=1
 		if [[ $EUID -ne 0 ]]; then
-			echo -e "\n${COLOR1}NOTE:\n$(tput setaf 1)This script installs required UI and CLI dependencies if not found!\nto provide an better UI\n${COLOR2}"
+			echo -e "\n${COLOR1}NOTE:\n$(tput setaf 1)This script installs required UI and CLI dependencies if not found!\nto provide an better UI\n"
+			echo -e "This script runs only the basic Security Check\n"
+			echo -e "If no warning's or critical issues found it doesn't mean your system\nis completely secure\n${COLOR2}"
 			sleep 2
 			sudo "$0" "$@"
 			exit 0
@@ -75,7 +77,9 @@ case "${1:-}" in
 		;;
 	"")
 		if [[ $EUID -ne 0 ]]; then
-			echo -e "\n${COLOR1}NOTE:\n$(tput setaf 1)This script installs required UI and CLI dependencies if not found!\nto provide an better UI\n${COLOR2}"
+			echo -e "\n${COLOR1}NOTE:\n$(tput setaf 1)This script installs required UI and CLI dependencies if not found!\nto provide an better UI\n"
+			echo -e "This script runs only the basic Security Check\n"
+			echo -e "If no warning's or critical issues found it doesn't mean your system\nis completely secure\n${COLOR2}"
 			read -rp "Press Enter to Proceed"
 			sudo "$0" "$@"
 			exit 0

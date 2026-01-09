@@ -1,29 +1,12 @@
 ## Security Check
 
-To Install the Tool as a script run the commands below...
+To Install the Tool run the commands below...
 
     git clone https://github.com/varshan-4068/arcsec-tool.git
     sudo pacman -S gum figlet
     cd arcsec-tool/
-    chmod +x security_check.sh
-    ./security_check.sh
-
-For help Use...
-
-    ./security_check.sh [OPTIONS]
-
-    OPTIONS:
-        -h | --help
-        -l | --log
-        -c | --clear
-
-To Use it as a command run the commands below...
-
-    git clone https://github.com/varshan-4068/arcsec-tool.git
-    sudo pacman -S gum figlet
-    cd arcsec-tool/
-    sudo cp bin/arcsec-tool /usr/bin/
-    arcsec-tool
+    chmod +x install.sh
+    ./install.sh    
 
 For help Use...
 
@@ -33,6 +16,7 @@ For help Use...
         -h | --help
         -l | --log
         -c | --clear
+        -n | --non-interactive
 
 <details>
 

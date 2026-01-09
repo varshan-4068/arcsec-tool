@@ -1,5 +1,10 @@
 #!/usr/bin/env bash
-
+#                                    _              _
+#   __ _ _ __ ___ ___  ___  ___     | |_ ___   ___ | |
+#  / _` | '__/ __/ __|/ _ \/ __|____| __/ _ \ / _ \| |
+# | (_| | | | (__\__ \  __/ (_|_____| || (_) | (_) | |
+#  \__,_|_|  \___|___/\___|\___|     \__\___/ \___/|_|
+#
 # arcsec-tool - Arch Linux Security Quick Check
 # Author: Sirivarshan K
 # Github: https://github.com/varshan-4068/
@@ -29,6 +34,9 @@ Description:
 	 - SSH configuration
 	 - sudo privileges
 	 - failed systemd services
+	 - Users with UID 0 (Root Privileges)
+	 - System clock synchronization
+	 - Disk Space Usage ( Above 80% Usage may break update and logging )
 	 - package updates
 	 - orphaned packages
 	 - firewall status
@@ -101,17 +109,20 @@ fi
 echo -e "${COLOR2}[$(date)]\n" >> "$LOGFILE"
 
 if ! command -v figlet &>/dev/null && [ "$INTERACTIVE" -eq 1 ];then
-	echo -e "Figlet Not Found! Installing...\n" | tee -a "$LOGFILE"
+	echo -e "\nFiglet Not Found! Installing...\n" | tee -a "$LOGFILE"
 	pacman -S figlet --noconfirm 
 elif ! command -v figlet &>/dev/null;then
-	echo -e "Figlet Not Found! Installing...\n" | tee -a "$LOGFILE"
+	echo -e "\nFiglet Not Found! Installing...\n" | tee -a "$LOGFILE"
 	pacman -S figlet
 fi
 
 
-if ! command -v gum &>/dev/null; then
-  echo -e "Gum Not Found! Installing...\n" | tee -a "$LOGFILE"
+if ! command -v gum &>/dev/null && [ "$INTERACTIVE" -eq 1 ]; then
+  echo -e "\nGum Not Found! Installing...\n" | tee -a "$LOGFILE"
   pacman -S gum --noconfirm
+elif ! command -v gum &>/dev/null;then
+  echo -e "\nGum Not Found! Installing...\n" | tee -a "$LOGFILE"
+  pacman -S gum
 fi
 
 logs(){
@@ -137,6 +148,14 @@ clear
 print_logo
 
 echo -e "\n${COLOR1}══ Arch Security Quick Check ══${COLOR2}\n" | tee -a "$LOGFILE"
+
+if systemctl is-enabled --quiet sshd 2>/dev/null; then
+  echo -e "${COLOR1}[OK] SSH service enabled" | tee -a "$LOGFILE"
+else
+  echo -e "${COLOR2}[WARN] SSH service disabled" | tee -a "$LOGFILE"
+	echo "[FIX]: Use \"systemctl enable sshd.service\"" | tee -a "$LOGFILE"
+	((WARN++))
+fi
 
 SSHD="/etc/ssh/sshd_config"
 
@@ -172,6 +191,36 @@ if [ "$FAIL" -eq 0 ]; then
   echo -e "${COLOR1}[OK] No Systemd Failed Services Found${COLOR2}" | tee -a "$LOGFILE"
 else
 	echo -e "${COLOR1}[WARN] $FAIL Failed Systemd Services Found${COLOR2}" | tee -a "$LOGFILE"
+	((WARN++))
+fi
+
+ROOT_USERS=$(awk -F: '$3 == 0 {print $1}' /etc/passwd | wc -l)
+
+if [ "$ROOT_USERS" -eq 1 ];then
+	echo -e "${COLOR1}[OK] Only $ROOT_USERS User is given UID 0 (Root User) Privileges" | tee -a "$LOGFILE"
+elif [ "$ROOT_USERS" -gt 1 ];then
+	echo -e "${COLOR1}[CRITICAL] $ROOT_USERS Users Found with UID 0 (Root User) Privileges" | tee -a "$LOGFILE"
+	((CRITICAL++))
+elif [ "$ROOT_USERS" -eq 0 ];then
+	echo -e "${COLOR1}[WARN] No User is given UID 0 (Root User) Privileges" | tee -a "$LOGFILE"
+	((WARN++))
+fi
+
+TIME_SYNC=$(timedatectl | grep -q "System clock synchronized: yes")
+
+if $TIME_SYNC;then
+	echo -e "${COLOR1}[OK] Automatic Time Sync is Enabled" | tee -a "$LOGFILE"
+else
+	echo -e "${COLOR1}[WARN] Automatic Time Sync is not Enabled" | tee -a "$LOGFILE"
+	((WARN++))
+fi
+
+DISK_SPACE=$(df / | awk 'NR==2 {print $5}' | cut -d'%' -f1)
+
+if [ "$DISK_SPACE" -lt 80 ];then
+	echo -e "${COLOR1}[OK] Disk Space Usage is $DISK_SPACE"% | tee -a "$LOGFILE"
+elif [ "$DISK_SPACE" -gt 80 ];then
+	echo -e "${COLOR1}[WARN] Disk Space Usage above 80% Can Break Updates / Logging" | tee -a "$LOGFILE"
 	((WARN++))
 fi
 
